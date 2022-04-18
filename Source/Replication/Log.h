@@ -21,8 +21,8 @@ public:
 		UE_LOG(LogTemp, Log, TEXT("%s"), Message);
 	}
 
-	static void Screen(const FString& Message, int32 Key = -1)
+	static void Screen(const FString& Message, int32 Key = -1, float Sec = 2.f)
 	{
-		GEngine->AddOnScreenDebugMessage(Key, 1.f, FColor::Green, Message);
+		GEngine->AddOnScreenDebugMessage(Key, Sec, FColor::Green, Message);
 	}
 };
