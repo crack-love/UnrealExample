@@ -1,5 +1,6 @@
 # Notice
 https://docs.unrealengine.com/5.0/ko/plugins-in-unreal-engine/
+-----
 현재 플러그인 구성 파일은 프로젝트와 같이 패키징되지 않습니다. 
 앞으로 지원될 수는 있지만, 현재 파일을 프로젝트의 Config 폴더에 수동 복사해야 합니다.
 
