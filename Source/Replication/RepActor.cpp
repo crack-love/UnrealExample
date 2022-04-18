@@ -40,6 +40,24 @@ ARepActor::ARepActor()
 	}
 }
 
+void ARepActor::LazyInitialize()
+{
+	static int Cnt = 0;
+	
+	// meaningless value only for screen info logging
+	localIndex = Cnt;
+	
+	++Cnt;
+	Value = Cnt;
+	StructValue.Value = Cnt;
+	UObjectValue->Value = Cnt;
+	for (int i = 0; i < ArrayValue.Num(); ++i)
+	{
+		ArrayValue[i] = Cnt;
+		StructValue.ArrayValue[i] = Cnt;
+	}
+}
+
 void ARepActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -70,22 +88,11 @@ void ARepActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// Set Initial Value Diffect each Client
-	static int Cnt = 0;
+	// Set Initial Value Differ each Client
 	if (!bLazyInitialized)
 	{
 		bLazyInitialized = true;
-
-		localIndex = Cnt;
-		++Cnt;
-		Value = Cnt;
-		StructValue.Value = Cnt;
-		UObjectValue->Value = Cnt;
-		for (int i = 0; i < ArrayValue.Num(); ++i)
-		{
-			ArrayValue[i] = Cnt;
-			StructValue.ArrayValue[i] = Cnt;
-		}
+		LazyInitialize();
 	}
 
 	// Only Server Side
