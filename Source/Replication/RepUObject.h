@@ -3,15 +3,16 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Net/UnrealNetwork.h"
-#include "RepObject.generated.h"
+#include "Log.h"
+#include "RepUObject.generated.h"
 
 UCLASS()
-class URepObject : public UObject
+class URepUObject : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	URepObject() 
+	URepUObject() 
 	{
 
 	}
@@ -22,7 +23,13 @@ public:
 	{
 		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-		DOREPLIFETIME(URepObject, Value);
+		DOREPLIFETIME(URepUObject, Value);
+	}
+
+	UFUNCTION()
+	void SetValue(float NewValue)
+	{
+		Value = NewValue;
 	}
 
 	UFUNCTION(Server, Reliable)
@@ -35,17 +42,13 @@ public:
 		}
 	}
 
-	float GetValue() { return Value; }
-
 	UFUNCTION()
 	void OnRep_Value()
 	{
-		UE_LOG(LogTemp, Log, TEXT("URepObject.OnRep_Object Value %f, IsServer:%d, IsClient:%d"), Value,
-			GetWorld()->IsServer(), GetWorld()->IsClient());
+		FLog::Log(TEXTF("URepObject.OnRep_Value %f", Value));
 	}
 
-private:
-	UPROPERTY(ReplicatedUsing = OnRep_Value)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Value)
 	float Value;
 };
 
