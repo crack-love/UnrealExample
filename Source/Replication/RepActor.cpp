@@ -4,6 +4,7 @@
 #include "Engine/ActorChannel.h" // UActorChannel
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/GameState.h"
+#include "DrawDebugHelpers.h"
 
 #include "RepUObject.h"
 #include "Log.h"
@@ -11,9 +12,19 @@
 ARepActor::ARepActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 1;
+	PrimaryActorTick.TickInterval = 0.6f;
 	SetReplicates(true);
 	SetReplicateMovement(true);
+
+	// Other Options
+	//AActor::NetUpdateFrequency - Used to determine how often an actor replicates
+	//AActor::PreReplication - Called before any replicaion occurs
+	// - For any actor that passes these initial checks, AActor::PreReplication is called.
+	// - PreReplication is a place where you can decide if you want properties to replicate for connections.
+	// - Use the DOREPLIFETIME_ACTIVE_OVERRIDE for this.
+	//AActor::bOnlyRelevantToOwner - True if this actor only replicates to owner
+	//AActor::IsRelevancyOwnerFor - Called to determine relevancy when bOnlyRelevantToOwner is true
+	//AActor::IsNetRelevantFor - Called to determine relevancy when bOnlyRelevantToOwner is false
 
 	// Create MeshComponent
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
@@ -25,29 +36,29 @@ ARepActor::ARepActor()
 	SetRootComponent(MeshComponent);
 
 	// Create SubObjects
-	// Only create server side object that will be replicated.
-	if (HasAuthority())
-	{
-		// Objects only replicate from server to client. If we didn't guard this
-		// the client would create the object just fine but it would get replaced 
-		// by the server version (more accurately the property would be replaced to 
-		// point to the version from the server. The one the client allocated would 
-		// eventually be garbage collected.
-		// NOTE: Very important, objects Outer must be our Actor! 
-		UObjectValue = CreateDefaultSubobject<URepUObject>(TEXT("SubObject"));
-		ArrayValue.Init(0, 10);
-		StructValue.ArrayValue.Init(0, 10);
-	}
+	// Objects only replicate from server to client. If we didn't guard this
+	// the client would create the object just fine but it would get replaced 
+	// by the server version (more accurately the property would be replaced to 
+	// point to the version from the server. The one the client allocated would 
+	// eventually be garbage collected.
+	// NOTE: Very important, objects Outer must be our Actor! 
+	UObjectValue = CreateDefaultSubobject<URepUObject>(TEXT("SubObject"));
+	ArrayValue.Init(0, 10);
+	StructValue.ArrayValue.Init(0, 10);
 }
 
-void ARepActor::LazyInitialize()
+void ARepActor::PostInitializeComponents()
 {
-	static int Cnt = 0;
-	
+	Super::PostInitializeComponents();
+
+	// Initialize
+	NetCullDistanceSquared = NetCullDistance * NetCullDistance;
+	MeshComponent->SetCullDistance(NetCullDistance);
+
 	// meaningless value only for screen info logging
-	localIndex = Cnt;
-	
-	++Cnt;
+	static int Cnt = 0;
+	ScreenLogIndex = Cnt;
+
 	Value = Cnt;
 	StructValue.Value = Cnt;
 	UObjectValue->Value = Cnt;
@@ -56,6 +67,7 @@ void ARepActor::LazyInitialize()
 		ArrayValue[i] = Cnt;
 		StructValue.ArrayValue[i] = Cnt;
 	}
+	++Cnt;
 }
 
 void ARepActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -75,7 +87,7 @@ void ARepActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	}
 }
 
-bool ARepActor::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+bool ARepActor::ReplicateSubobjects(class UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
@@ -87,13 +99,6 @@ bool ARepActor::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FR
 void ARepActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	// Set Initial Value Differ each Client
-	if (!bLazyInitialized)
-	{
-		bLazyInitialized = true;
-		LazyInitialize();
-	}
 
 	// Only Server Side
 	if (HasAuthority())
@@ -115,6 +120,9 @@ void ARepActor::Tick(float DeltaSeconds)
 	{
 		LogNetInfo();
 	}
+
+	// draw net cull range sphere
+	DrawDebugSphere(GetWorld(), GetActorLocation(), NetCullDistance, 50, FColor::Green, false, PrimaryActorTick.TickInterval);
 }
 
 void ARepActor::Server_Tick_Implementation(int param)
@@ -252,5 +260,6 @@ void ARepActor::LogNetInfo()
 	Msg.Appendf(TEXT("HasAuth:%d "), HasAuthority());
 	Msg.Appendf(TEXT("bRepValue:%d "), bReplicateValue);
 	Msg.Appendf(TEXT("LocalRole:%s "), *LocalRoleStr);
-	FLog::Screen(Msg, localIndex, 3.f);
+	Msg.Appendf(TEXT("NetCull:%f "), NetCullDistanceSquared);
+	FLog::Screen(Msg, ScreenLogIndex, 3.f);
 }

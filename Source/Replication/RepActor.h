@@ -28,7 +28,7 @@ class ARepActor : public AActor
 public:
 	ARepActor();
 
-	void LazyInitialize();
+	void PostInitializeComponents() override;
 
 	//
 	// RPC Calls
@@ -47,6 +47,7 @@ protected:
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	bool ReplicateSubobjects(class UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 	void Tick(float DeltaSeconds) override;
+	bool NeedsLoadForClient() const override { return true; }
 
 	//
 	// Replicated Callbacks
@@ -102,10 +103,7 @@ private:
 private:
 	class UStaticMeshComponent* MeshComponent;
 
-	// To Initialize each Server/client has diff value
-	bool bLazyInitialized = false;
-
-	int localIndex = 0;
+	int ScreenLogIndex = 0;
 
 	// Modifying bool values through editer's inspector on runtime is not applied each client.
 	// even property attibute as Replicated. seems the actor not ensured 0 index (autorized)
@@ -136,4 +134,7 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	bool bLogNetInfo = true;
+
+	UPROPERTY(EditAnywhere)
+	float NetCullDistance = 500;
 };
