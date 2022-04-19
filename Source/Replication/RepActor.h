@@ -74,8 +74,12 @@ private:
 	// Private methods
 	//
 private:
-	void LogArray(TCHAR* Tag, TArray<int32>& Array);
+	void LogArray(const TCHAR* Tag, TArray<int32>& Array);
 
+	void LogMessage(const TCHAR* PMsg);
+
+	void LogNetInfo();
+	
 	//
 	// Replicate Fields
 	//
@@ -131,5 +135,5 @@ private:
 	bool bNotifyClient = false;
 
 	UPROPERTY(EditAnywhere)
-	bool bLogNetInfo = false;
+	bool bLogNetInfo = true;
 };

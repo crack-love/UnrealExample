@@ -111,21 +111,9 @@ void ARepActor::Tick(float DeltaSeconds)
 		}
 	}
 
-	// Log Net Info
 	if (bLogNetInfo)
 	{
-		auto player = GEngine->GetFirstGamePlayer(GetWorld());
-		FString GameInsStr = player->GetGameInstance()->GetName();
-		FString LocalRoleStr = UEnum::GetValueAsString(GetLocalRole());
-		FString NetDriverNameStr = GetWorld()->GetNetDriver()->GetName();
-		
-		FString Msg;
-		Msg.Appendf(TEXT("GameIns:%s "), *GameInsStr);
-		Msg.Appendf(TEXT("NetDriver:%s "), *NetDriverNameStr);
-		Msg.Appendf(TEXT("HasAuth:%d "), HasAuthority());
-		Msg.Appendf(TEXT("bRepValue:%d "), bReplicateValue);
-		Msg.Appendf(TEXT("LocalRole:%s "), *LocalRoleStr);
-		FLog::Screen(Msg, localIndex, 3.f);
+		LogNetInfo();
 	}
 }
 
@@ -135,7 +123,7 @@ void ARepActor::Server_Tick_Implementation(int param)
 
 	if (bReplicateMoveOffset)
 	{
-		AddActorLocalOffset(FVector::OneVector * 0.1f * param);
+		AddActorLocalOffset(FVector::OneVector * param);
 	}
 
 	if (bReplicateValue)
@@ -192,14 +180,14 @@ void ARepActor::Client_Notify_Implementation()
 {
 	check((GetLocalRole() & ROLE_SimulatedProxy) != ROLE_None);
 
-	FLog::Log(TEXTF("ARepActor.Client_Notify %s", *GetWorld()->GetFirstPlayerController()->GetName()));
+	LogMessage(TEXT("ARepActor.Client_Notify"));
 }
 
 void ARepActor::OnRep_Value()
 {
 	check(GetLocalRole() != ROLE_Authority);
 	
-	FLog::Log(TEXTF("ARepActor.OnRep_Value Value: %f", Value));
+	LogMessage(TEXTFP("ARepActor.OnRep_Value Value: %f", Value));
 }
 
 void ARepActor::OnRep_Struct()
@@ -208,7 +196,7 @@ void ARepActor::OnRep_Struct()
 
 	if (bReplicateStructValue)
 	{
-		FLog::Log(TEXTF("ARepActor.OnRep_Struct Value: %f", StructValue.Value));
+		LogMessage(TEXTFP("ARepActor.OnRep_Struct Value: %f", StructValue.Value));
 	}
 
 	if (bReplicateStructArray)
@@ -221,7 +209,7 @@ void ARepActor::OnRep_UObject()
 {
 	check(!HasAuthority());
 
-	FLog::Log(TEXTF("ARepActor.OnRep_UObject UObject.Value: %f", UObjectValue == nullptr ? -1.f : Value));
+	LogMessage(TEXTFP("ARepActor.OnRep_UObject UObject.Value: %f", UObjectValue == nullptr ? -1.f : Value));
 }
 
 void ARepActor::OnRep_Array()
@@ -231,7 +219,15 @@ void ARepActor::OnRep_Array()
 	LogArray(TEXT("ARepActor.OnRep_Array Array: "), ArrayValue);
 }
 
-void ARepActor::LogArray(TCHAR* PMsg, TArray<int32>& PArray)
+void ARepActor::LogMessage(const TCHAR* PMsg)
+{
+	FString Msg;
+	Msg.Appendf(TEXT("%s: "), *GetWorld()->GetGameInstance()->GetName());
+	Msg.Appendf(TEXT("%s"), PMsg);
+	FLog::Log(Msg);
+}
+
+void ARepActor::LogArray(const TCHAR* PMsg, TArray<int32>& PArray)
 {
 	FString Msg(PMsg);
 
@@ -241,4 +237,20 @@ void ARepActor::LogArray(TCHAR* PMsg, TArray<int32>& PArray)
 	}
 
 	FLog::Log(Msg);
+}
+
+void ARepActor::LogNetInfo()
+{
+	auto player = GEngine->GetFirstGamePlayer(GetWorld());
+	FString GameInsStr = player->GetGameInstance()->GetName();
+	FString LocalRoleStr = UEnum::GetValueAsString(GetLocalRole());
+	FString NetDriverNameStr = GetWorld()->GetNetDriver()->GetName();
+
+	FString Msg;
+	Msg.Appendf(TEXT("GameIns:%s "), *GameInsStr);
+	Msg.Appendf(TEXT("NetDriver:%s "), *NetDriverNameStr);
+	Msg.Appendf(TEXT("HasAuth:%d "), HasAuthority());
+	Msg.Appendf(TEXT("bRepValue:%d "), bReplicateValue);
+	Msg.Appendf(TEXT("LocalRole:%s "), *LocalRoleStr);
+	FLog::Screen(Msg, localIndex, 3.f);
 }
